@@ -77,31 +77,37 @@ if uploaded_files:
 
 # Image URL Input
 st.subheader("-OR-")
-st.subheader("Provide an image URL:")
-image_url = st.text_input("Enter image URL:")
+st.subheader("Provide image URLs (separated by commas):")
+image_urls = st.text_input("Enter image URLs:")
 
-if image_url:
-    try:
-        response = requests.get(image_url)
-        image = Image.open(BytesIO(response.content))
-        st.image(image, caption="Image from URL.", use_container_width=True)
+if image_urls:
+    urls = [url.strip() for url in image_urls.split(",")]
+    for image_url in urls:
+        try:
+            response = requests.get(image_url)
+            response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+            image = Image.open(BytesIO(response.content))
+            st.image(image, caption=f"Image from URL: {image_url}", use_container_width=True)
 
-        inputs = processor(images=image, return_tensors="pt")
-        outputs = model(**inputs)
+            inputs = processor(images=image, return_tensors="pt")
+            outputs = model(**inputs)
 
-        probabilities = torch.nn.functional.softmax(outputs.logits[0], dim=0)
-        predicted_class_idx = torch.argmax(probabilities).item()
-        predicted_class = model.config.id2label[predicted_class_idx]
-        confidence = probabilities[predicted_class_idx].item() * 100
+            probabilities = torch.nn.functional.softmax(outputs.logits[0], dim=0)
+            predicted_class_idx = torch.argmax(probabilities).item()
+            predicted_class = model.config.id2label[predicted_class_idx]
+            confidence = probabilities[predicted_class_idx].item() * 100
 
-        st.write(f"**Predicted Food:** {predicted_class}")
-        st.write(f"**Accuracy:** {confidence:.2f}%")
+            st.write(f"**Predicted Food:** {predicted_class}")
+            st.write(f"**Accuracy:** {confidence:.2f}%")
 
-        calorie, weight = get_nutrition_info(predicted_class, calorie_df)
-        if calorie is not None and weight is not None:
-            st.write(f"**Estimated Calorie:** {calorie} kcal / {weight} g")
-        else:
-            st.write("Calorie and weight estimation not available for this food.")
+            calorie, weight = get_nutrition_info(predicted_class, calorie_df)
+            if calorie is not None and weight is not None:
+                st.write(f"**Estimated Calorie:** {calorie} kcal / {weight} g")
+            else:
+                st.write("Calorie and weight estimation not available for this food.")
+            st.write("---")
 
-    except Exception as e:
-        st.error(f"Error processing image URL: {e}")
+        except requests.exceptions.RequestException as e:
+            st.error(f"Error fetching image URL: {image_url} - {e}")
+        except Exception as e:
+            st.error(f"Error processing image URL: {image_url} - {e}")
