@@ -50,31 +50,33 @@ st.title("FudAI")
 st.title("Food Image Classification for Automated Dietary Monitoring")
 st.subheader("Just Snap a Pic & We'll Take Care of Your Diet!")
 
-uploaded_file = st.file_uploader("Upload a food image", type=["jpg", "jpeg", "png"])
+uploaded_files = st.file_uploader("Upload food images", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
-if uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image.", use_container_width=True)
+if uploaded_files:
+    for uploaded_file in uploaded_files:
+        image = Image.open(uploaded_file)
+        st.image(image, caption=f"Uploaded Image: {uploaded_file.name}", use_container_width=True)
 
-    inputs = processor(images=image, return_tensors="pt")
-    outputs = model(**inputs)
+        inputs = processor(images=image, return_tensors="pt")
+        outputs = model(**inputs)
 
-    probabilities = torch.nn.functional.softmax(outputs.logits[0], dim=0)
-    predicted_class_idx = torch.argmax(probabilities).item()
-    predicted_class = model.config.id2label[predicted_class_idx]
-    confidence = probabilities[predicted_class_idx].item() * 100
+        probabilities = torch.nn.functional.softmax(outputs.logits[0], dim=0)
+        predicted_class_idx = torch.argmax(probabilities).item()
+        predicted_class = model.config.id2label[predicted_class_idx]
+        confidence = probabilities[predicted_class_idx].item() * 100
 
-    st.write(f"**Predicted Food:** {predicted_class}")
-    st.write(f"**Accuracy:** {confidence:.2f}%")
+        st.write(f"**Predicted Food:** {predicted_class}")
+        st.write(f"**Accuracy:** {confidence:.2f}%")
 
-    calorie, weight = get_nutrition_info(predicted_class, calorie_df)
-    if calorie is not None and weight is not None:
-        st.write(f"**Estimated Calorie:** {calorie} kcal per {weight} g")
-    else:
-        st.write("Calorie and weight estimation not available for this food.")
+        calorie, weight = get_nutrition_info(predicted_class, calorie_df)
+        if calorie is not None and weight is not None:
+            st.write(f"**Estimated Calorie:** {calorie} kcal per {weight} g")
+        else:
+            st.write("Calorie and weight estimation not available for this food.")
+        st.write("---")
 
 # Image URL Input
-st.subheader("Or")
+st.subheader("-OR-")
 st.subheader("Provide an image URL:")
 image_url = st.text_input("Enter image URL:")
 
